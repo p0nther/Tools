@@ -26,18 +26,18 @@ blank_lines() {
 
 # ---------- Some Tech Info ----------
 blank_lines
-echo "---------- Some Tech Info \"whatweb\" ----------" | tee -a "$INFO_FILE"
+echo "---------- Some Tech Info \" whatweb \" ----------" | tee -a "$INFO_FILE"
 whatweb http://$DOMAIN -v >> "$INFO_FILE" 2>/dev/null
 whatweb https://$DOMAIN -v >> "$INFO_FILE" 2>/dev/null
 
 # ---------- Nmap Scan ----------
 blank_lines
-echo "---------- Nmap Scan  \"-A --script=default,http-methods\"----------" | tee -a "$INFO_FILE"
+echo "---------- Nmap Scan  \" -A --script=default,http-methods \"----------" | tee -a "$INFO_FILE"
 nmap -A  --script="default,http-methods"  -oN "$NMAP_OUT" "$DOMAIN" >> "$INFO_FILE" 2>/dev/null
 
 # ---------- Subdomain Enumeration ----------
 blank_lines
-echo "---------- Subdomain Enumeration \"subfinder\"----------" | tee -a "$INFO_FILE"
+echo "---------- Subdomain Enumeration \" subfinder \"----------" | tee -a "$INFO_FILE"
 
 # Adjust TLD for subfinder if needed
 SUBFINDER_DOMAIN="$DOMAIN"
@@ -58,7 +58,7 @@ fi
 
 # ---------- Live Subdomains ----------
 blank_lines
-echo "---------- Live Subdomains \"-ports(mostPop) -titel -status-code -tech-detect -follow-redirects\"----------" | tee -a "$INFO_FILE"
+echo "---------- Live Subdomains \" -ports(mostPop) -titel -status-code -tech-detect -follow-redirects \"----------" | tee -a "$INFO_FILE"
 httpx -l "$HTTPX_INPUT" \
     -ports 80,443,8080,8443,8000,8888,3000,5000,7001,9443,9080,8090,8181,8500,9000,9200,5601,5984,5001,10000 \
     -title -status-code -tech-detect -follow-redirects -o "$LIVE_FILE" >> "$INFO_FILE" 2>/dev/null 
