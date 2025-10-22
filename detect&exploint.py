@@ -1,5 +1,5 @@
 """
-hello , i'm abdarhman known as p0nther. i use AI to bulid this tool . it's take 2 hour
+hello , i'm abdarhman known as p0nther. i use AI to bulid this tool . it's take 2 hour 
 
 SQL Injection Detection Tool - Blind/Boolean Based
 Automatically detects database type and enumerates tables, columns, and data.
