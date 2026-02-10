@@ -145,7 +145,7 @@ echo "---------- Live Subdomains (httpx) ----------" | tee -a "$INFO_FILE"
 
 if [ -f "$SUBS_VALIDATED" ] && [ -s "$SUBS_VALIDATED" ]; then
     httpx -l "$SUBS_VALIDATED" \
-        -ports 80,443,  \
+        -ports 80,443  \
         -title -status-code -tech-detect -follow-redirects \
         -silent -o "$LIVE_FILE" 2>/dev/null
     
