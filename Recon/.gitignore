@@ -1,0 +1,24 @@
+# Recon output directories
+*/
+
+# Exclude the script itself and documentation
+!recon.sh
+!README.md
+!LICENSE
+!.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
