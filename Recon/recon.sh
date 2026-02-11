@@ -2,7 +2,7 @@
 
 # Enhanced Recon Script
 # Usage: ./recon.sh <domain> [github-org]
-# Required tools: whatweb, nmap, subfinder, puredns, httpx, naabu, subjack, trufflehog
+# Required tools: whatweb, nmap, subfinder, puredns, httpx, naabu, subjack, trufflehog, nuclei
 
 # Colors for output
 RED='\033[0;31m'
@@ -41,9 +41,11 @@ RESOLVERS="$TARGET_DIR/dns/resolvers.txt"
 LIVE_FILE="$TARGET_DIR/web/live_subdomains.txt"
 LIVE_HOSTS="$TARGET_DIR/web/live_hosts.txt"
 HTTPX_FULL="$TARGET_DIR/web/httpx_full_output.txt"
+LIVE_URLS="$TARGET_DIR/web/live_urls.txt"
 PORTS_FILE="$TARGET_DIR/ports/all_ports.txt"
 NMAP_OUT="$TARGET_DIR/ports/nmap_scan.txt"
 TAKEOVER_FILE="$TARGET_DIR/takeover/subjack_results.txt"
+NUCLEI_OUT="$TARGET_DIR/web/nuclei_results.txt"
 TRUFFLEHOG_OUT="$TARGET_DIR/secrets/github_secrets.json"
 INFO_FILE="$TARGET_DIR/logs/all_info.txt"
 WHATWEB_OUT="$TARGET_DIR/logs/whatweb.txt"
@@ -68,7 +70,7 @@ print_info() {
 
 # Check if required tools are installed
 check_tools() {
-    local tools=("subfinder" "puredns" "httpx" "naabu" "subjack")
+    local tools=("subfinder" "puredns" "httpx" "naabu" "subjack" "nuclei")
     local missing=()
     
     for tool in "${tools[@]}"; do
@@ -95,7 +97,7 @@ check_tools || exit 1
 blank_lines
 print_status "Gathering tech info with whatweb..."
 echo "---------- Tech Info (whatweb) ----------" | tee -a "$INFO_FILE"
-whatweb "http://$DOMAIN" -v > "$WHATWEB_OUT" 2>/dev/null
+
 whatweb "https://$DOMAIN" -v >> "$WHATWEB_OUT" 2>/dev/null
 cat "$WHATWEB_OUT" >> "$INFO_FILE"
 
@@ -111,6 +113,8 @@ print_status "Step 1: Enumerating subdomains with subfinder..."
 echo "---------- Subdomain Enumeration (subfinder) ----------" | tee -a "$INFO_FILE"
 
 subfinder -d "$DOMAIN" -silent -o "$SUBS_RAW" 2>/dev/null
+echo "$DOMAIN" >> "$SUBS_RAW"
+sort -u "$SUBS_RAW" -o "$SUBS_RAW"
 
  
 
@@ -152,8 +156,9 @@ if [ -f "$SUBS_VALIDATED" ] && [ -s "$SUBS_VALIDATED" ]; then
     LIVE_COUNT=$(wc -l < "$LIVE_FILE" 2>/dev/null || echo "0")
     print_status "Found $LIVE_COUNT live subdomains"
     
-    # Extract just the URLs for port scanning
-    cat "$LIVE_FILE" | awk '{print $1}' | sed 's|https\?://||' | sed 's|:.*||' | sort -u > "$LIVE_HOSTS"
+    # Extract just the URLs for port scanning and nuclei
+    cat "$LIVE_FILE" | awk '{print $1}' | sort -u > "$LIVE_URLS"
+    cat "$LIVE_FILE" | awk '{print $1}' | sed 's|https://||' | sed 's|:.*||' | sort -u > "$LIVE_HOSTS"
 else
     print_error "No validated subdomains to check"
     touch "$LIVE_FILE"
@@ -236,6 +241,27 @@ else
     print_info "To scan GitHub: $0 $DOMAIN <github-org-name>"
 fi
 
+# ---------- STEP 7: Vulnerability Scanning with Nuclei ----------
+blank_lines
+print_status "Step 7: Scanning for vulnerabilities with nuclei..."
+echo "---------- Vulnerability Scan (nuclei) ----------" | tee -a "$INFO_FILE"
+
+if [ -f "$LIVE_URLS" ] && [ -s "$LIVE_URLS" ]; then
+    nuclei -l "$LIVE_URLS" -as \
+        -o "$NUCLEI_OUT" 2>/dev/null
+    
+    NUCLEI_COUNT=$(wc -l < "$NUCLEI_OUT" 2>/dev/null || echo "0")
+    if [ "$NUCLEI_COUNT" -gt 0 ]; then
+        print_error "⚠️  FOUND $NUCLEI_COUNT POTENTIAL VULNERABILITIES!"
+        print_info "Check $NUCLEI_OUT for details"
+    else
+        print_status "No vulnerabilities found by nuclei"
+    fi
+else
+    print_error "No live URLs to scan with nuclei"
+    touch "$NUCLEI_OUT"
+fi
+
 # ---------- Summary ----------
 blank_lines
 echo -e "${GREEN}========================================${NC}"
@@ -247,6 +273,7 @@ echo "  • Subdomains found: $SUBFINDER_COUNT"
 echo "  • Validated subdomains: $VALIDATED_COUNT"
 echo "  • Live subdomains: $LIVE_COUNT"
 echo "  • Open ports discovered: $PORT_COUNT"
+echo "  • Nuclei vulnerabilities: $NUCLEI_COUNT"
 echo ""
 print_status "Output directory: $(pwd)/$TARGET_DIR"
 echo ""
@@ -264,11 +291,12 @@ print_info "Quick Access:"
 echo "  • Live subdomains:    cat $TARGET_DIR/web/live_subdomains.txt"
 echo "  • Open ports:         cat $TARGET_DIR/ports/all_ports.txt"
 echo "  • Takeover results:   cat $TARGET_DIR/takeover/subjack_results.txt"
+echo "  • Nuclei results:     cat $TARGET_DIR/web/nuclei_results.txt"
 echo "  • All logs:           cat $TARGET_DIR/logs/all_info.txt"
 echo ""
 print_info "Next Steps:"
 echo "  1. Work on subdomains one by one"
-echo "  2. Focus on one function until you try & know everything about it"
+echo "  2. Focus on one function until you know everything about it"
 echo "  3. Take notes (write all scenario for this function try anything in it)"
 echo ""
 print_status "Happy Hacking! 🎯"
