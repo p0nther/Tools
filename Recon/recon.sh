@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enhanced Recon Script
-# Usage: ./recon.sh <domain> [github-org]
+# Usage: ./recon.sh <domain> [github-org-or-repo-url]
 # Required tools: whatweb, nmap, subfinder, puredns, httpx, naabu, subjack, trufflehog, nuclei
 
 # Colors for output
@@ -22,13 +22,14 @@ EOF
 echo -e "${NC}"
 
 if [ -z "$1" ]; then
-    echo -e "${RED}[!] Usage: $0 <domain> [github-org]${NC}"
-    echo -e "${YELLOW}[*] Example: $0 example.com example-org${NC}"
+    echo -e "${RED}[!] Usage: $0 <domain> [github-org-or-repo-url]${NC}"
+    echo -e "${YELLOW}[*] Example (Org):  $0 example.com example-org${NC}"
+    echo -e "${YELLOW}[*] Example (Repo): $0 example.com https://github.com/org/repo${NC}"
     exit 1
 fi
 
 DOMAIN=$1
-GITHUB_ORG=$2
+GITHUB_TARGET=$2
 TARGET_DIR="${DOMAIN}"
 
 # Create organized directory structure
@@ -127,7 +128,7 @@ print_status "Step 2: Validating subdomains with puredns..."
 echo "---------- DNS Validation (puredns) ----------" | tee -a "$INFO_FILE"
 
 if [ -f "$SUBS_RAW" ] && [ -s "$SUBS_RAW" ]; then
-    # PureDNS requires a resolvers list - using public DNS
+    # PureDNS requires a resolvers list - using public DNSs
     echo "8.8.8.8" > "$RESOLVERS"
     echo "8.8.4.4" >> "$RESOLVERS"
     echo "1.1.1.1" >> "$RESOLVERS"
@@ -214,12 +215,17 @@ fi
 
 # ---------- STEP 6: GitHub Secret Scanning with TruffleHog ----------
 blank_lines
-if [ -n "$GITHUB_ORG" ]; then
-    print_status "Step 6: Scanning GitHub organization '$GITHUB_ORG' with trufflehog..."
+if [ -n "$GITHUB_TARGET" ]; then
     echo "---------- GitHub Secrets (trufflehog) ----------" | tee -a "$INFO_FILE"
     
     if command -v trufflehog &> /dev/null; then
-        trufflehog github --org="$GITHUB_ORG" --json > "$TRUFFLEHOG_OUT" 2>/dev/null
+        if [[ "$GITHUB_TARGET" == http* ]]; then
+            print_status "Step 6: Scanning GitHub repository '$GITHUB_TARGET' with trufflehog..."
+            trufflehog github --repo="$GITHUB_TARGET" --json > "$TRUFFLEHOG_OUT" 2>/dev/null
+        else
+            print_status "Step 6: Scanning GitHub organization '$GITHUB_TARGET' with trufflehog..."
+            trufflehog github --org="$GITHUB_TARGET" --json > "$TRUFFLEHOG_OUT" 2>/dev/null
+        fi
         
         if [ -f "$TRUFFLEHOG_OUT" ] && [ -s "$TRUFFLEHOG_OUT" ]; then
             SECRET_COUNT=$(grep -c "Raw" "$TRUFFLEHOG_OUT" 2>/dev/null || echo "0")
@@ -237,8 +243,8 @@ if [ -n "$GITHUB_ORG" ]; then
         print_info "Or: brew install trufflesecurity/trufflehog/trufflehog"
     fi
 else
-    print_info "Step 6: Skipping GitHub scan (no organization specified)"
-    print_info "To scan GitHub: $0 $DOMAIN <github-org-name>"
+    print_info "Step 6: Skipping GitHub scan (no organization or repo URL specified)"
+    print_info "To scan GitHub: $0 $DOMAIN <github-org-or-repo-url>"
 fi
 
 # ---------- STEP 7: Vulnerability Scanning with Nuclei ----------
