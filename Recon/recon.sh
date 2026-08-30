@@ -45,6 +45,7 @@ HTTPX_FULL="$TARGET_DIR/web/httpx_full_output.txt"
 LIVE_URLS="$TARGET_DIR/web/live_urls.txt"
 ALL_URLS="$TARGET_DIR/web/wayback_urls.txt"
 JS_FILES="$TARGET_DIR/web/js_files.txt"
+MANTRA_OUT="$TARGET_DIR/web/mantra_results.txt"
 PORTS_FILE="$TARGET_DIR/ports/all_ports.txt"
 NMAP_OUT="$TARGET_DIR/ports/nmap_scan.txt"
 TAKEOVER_FILE="$TARGET_DIR/takeover/subjack_results.txt"
@@ -197,6 +198,13 @@ if [ -f "$LIVE_HOSTS" ] && [ -s "$LIVE_HOSTS" ]; then
 
         if [ "$JS_COUNT" -gt 0 ]; then
             print_info "JavaScript files saved to: $JS_FILES"
+
+            if command -v mantra &> /dev/null; then
+                print_info "Running mantra against collected JS files..."
+                cat "$JS_FILES" | mantra | tee "$MANTRA_OUT"
+            else
+                print_error "mantra not installed — skipping"
+            fi
         fi
 
     else
