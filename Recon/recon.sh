@@ -165,6 +165,43 @@ else
     touch "$LIVE_FILE"
 fi
 
+# ---------- STEP 4: Extract JavaScript Files ----------
+blank_lines
+print_status "Step 4: Gathering URLs from Wayback Machine..."
+echo "---------- JavaScript Discovery (waybackurls) ----------" | tee -a "$INFO_FILE"
+
+if [ -f "$LIVE_HOSTS" ] && [ -s "$LIVE_HOSTS" ]; then
+
+    if command -v waybackurls &> /dev/null; then
+
+        cat "$LIVE_HOSTS" | waybackurls > "$ALL_URLS" 2>/dev/null
+
+        URL_COUNT=$(wc -l < "$ALL_URLS" 2>/dev/null || echo "0")
+        print_status "Collected $URL_COUNT historical URLs"
+
+        grep -E "\.js(\?|$)" "$ALL_URLS" | sort -u > "$JS_FILES"
+
+        JS_COUNT=$(wc -l < "$JS_FILES" 2>/dev/null || echo "0")
+        print_status "Found $JS_COUNT JavaScript files"
+
+        if [ "$JS_COUNT" -gt 0 ]; then
+            print_info "JavaScript files saved to: $JS_FILES"
+        fi
+
+    else
+        print_error "waybackurls not installed"
+        print_info "Install with:"
+        print_info "go install github.com/tomnomnom/waybackurls@latest"
+        touch "$ALL_URLS"
+        touch "$JS_FILES"
+    fi
+
+else
+    print_error "No live hosts found for Wayback collection"
+    touch "$ALL_URLS"
+    touch "$JS_FILES"
+fi
+
 # ---------- STEP 4: Port Scanning with Naabu ----------
 blank_lines
 print_status "Step 4: Scanning all ports with naabu..."
